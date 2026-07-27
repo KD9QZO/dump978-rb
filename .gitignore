@@ -9,3 +9,6 @@ debian/dump978-rb.postrm.debhelper
 debian/dump978-rb.prerm.debhelper
 debian/dump978-rb.substvars
 
+build/
+build*/
+build-*/
