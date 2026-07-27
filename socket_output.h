@@ -17,93 +17,113 @@
 #include "message_dispatch.h"
 #include "uat_message.h"
 
+
 namespace airnav::uat {
-    class SocketOutput : public std::enable_shared_from_this<SocketOutput> {
-      public:
-        typedef std::shared_ptr<SocketOutput> Pointer;
+	class SocketOutput: public std::enable_shared_from_this<SocketOutput> {
+	public:
+		typedef std::shared_ptr<SocketOutput> Pointer;
 
-        virtual void Start();
-        void Write(SharedMessageVector messages);
-        virtual void Close();
+		virtual void Start();
+		void Write(SharedMessageVector messages);
+		virtual void Close();
 
-        void SetCloseNotifier(std::function<void()> notifier) { close_notifier_ = notifier; }
+		void SetCloseNotifier(std::function<void()> notifier) {
+			close_notifier_ = notifier;
+		}
 
-        bool IsOpen() const { return socket_.is_open(); }
+		bool IsOpen() const {
+			return socket_.is_open();
+		}
 
-      protected:
-        SocketOutput(boost::asio::io_service &service_, boost::asio::ip::tcp::socket &&socket_);
-        std::ostringstream &Buf() { return outbuf_; }
+	protected:
+		SocketOutput(boost::asio::io_service &service_, boost::asio::ip::tcp::socket &&socket_);
 
-        virtual void InternalWrite(SharedMessageVector messages) = 0;
+		std::ostringstream &Buf() {
+			return outbuf_;
+		}
 
-      private:
-        void HandleError(const boost::system::error_code &ec);
-        void Flush();
-        void ReadAndDiscard();
+		virtual void InternalWrite(SharedMessageVector messages) = 0;
 
-        boost::asio::io_service &service_;
-        boost::asio::io_service::strand strand_;
-        boost::asio::ip::tcp::socket socket_;
-        boost::asio::ip::tcp::endpoint peer_;
+	private:
+		void HandleError(const boost::system::error_code &ec);
+		void Flush();
+		void ReadAndDiscard();
 
-        std::ostringstream outbuf_;
-        bool flush_pending_;
+		boost::asio::io_service &service_;
+		boost::asio::io_service::strand strand_;
+		boost::asio::ip::tcp::socket socket_;
+		boost::asio::ip::tcp::endpoint peer_;
 
-        std::function<void()> close_notifier_;
-    };
+		std::ostringstream outbuf_;
+		bool flush_pending_;
 
-    class RawOutput : public SocketOutput {
-      public:
-        // factory method, this class must always be constructed via make_shared
-        static Pointer Create(boost::asio::io_service &service, boost::asio::ip::tcp::socket &&socket, SharedMessageVector header) { return Pointer(new RawOutput(service, std::move(socket), header)); }
+		std::function<void()> close_notifier_;
+	};
 
-        void Start() override;
 
-      protected:
-        void InternalWrite(SharedMessageVector messages) override;
+	class RawOutput: public SocketOutput {
+	public:
+		// factory method, this class must always be constructed via make_shared
+		static Pointer Create(boost::asio::io_service &service, boost::asio::ip::tcp::socket &&socket, SharedMessageVector header) {
+			return Pointer(new RawOutput(service, std::move(socket), header));
+		}
 
-      private:
-        RawOutput(boost::asio::io_service &service_, boost::asio::ip::tcp::socket &&socket_, SharedMessageVector header) : SocketOutput(service_, std::move(socket_)) { header_ = header; }
+		void Start() override;
 
-        SharedMessageVector header_;
-    };
+	protected:
+		void InternalWrite(SharedMessageVector messages) override;
 
-    class JsonOutput : public SocketOutput {
-      public:
-        // factory method, this class must always be constructed via make_shared
-        static Pointer Create(boost::asio::io_service &service, boost::asio::ip::tcp::socket &&socket) { return Pointer(new JsonOutput(service, std::move(socket))); }
+	private:
+		RawOutput(boost::asio::io_service &service_, boost::asio::ip::tcp::socket &&socket_, SharedMessageVector header): SocketOutput(service_, std::move(socket_)) {
+			header_ = header;
+		}
 
-      protected:
-        void InternalWrite(SharedMessageVector messages) override;
+		SharedMessageVector header_;
+	};
 
-      private:
-        JsonOutput(boost::asio::io_service &service_, boost::asio::ip::tcp::socket &&socket_) : SocketOutput(service_, std::move(socket_)) {}
-    };
 
-    class SocketListener : public std::enable_shared_from_this<SocketListener> {
-      public:
-        typedef std::shared_ptr<SocketListener> Pointer;
-        typedef std::function<SocketOutput::Pointer(boost::asio::io_service &, boost::asio::ip::tcp::socket &&)> ConnectionFactory;
+	class JsonOutput: public SocketOutput {
+	public:
+		// factory method, this class must always be constructed via make_shared
+		static Pointer Create(boost::asio::io_service &service, boost::asio::ip::tcp::socket &&socket) {
+			return Pointer(new JsonOutput(service, std::move(socket)));
+		}
 
-        // factory method, this class must always be constructed via make_shared
-        static Pointer Create(boost::asio::io_service &service, const boost::asio::ip::tcp::endpoint &endpoint, MessageDispatch &dispatch, ConnectionFactory factory) { return Pointer(new SocketListener(service, endpoint, dispatch, factory)); }
+	protected:
+		void InternalWrite(SharedMessageVector messages) override;
 
-        void Start();
-        void Close();
+	private:
+		JsonOutput(boost::asio::io_service &service_, boost::asio::ip::tcp::socket &&socket_): SocketOutput(service_, std::move(socket_)) {
+		}
+	};
 
-      private:
-        SocketListener(boost::asio::io_service &service, const boost::asio::ip::tcp::endpoint &endpoint, MessageDispatch &dispatch, ConnectionFactory factory);
 
-        void Accept();
+	class SocketListener: public std::enable_shared_from_this<SocketListener> {
+	public:
+		typedef std::shared_ptr<SocketListener> Pointer;
+		typedef std::function<SocketOutput::Pointer(boost::asio::io_service &, boost::asio::ip::tcp::socket &&)> ConnectionFactory;
 
-        boost::asio::io_service &service_;
-        boost::asio::ip::tcp::acceptor acceptor_;
-        boost::asio::ip::tcp::endpoint endpoint_;
-        boost::asio::ip::tcp::socket socket_;
-        boost::asio::ip::tcp::endpoint peer_;
-        MessageDispatch &dispatch_;
-        ConnectionFactory factory_;
-    };
+		// factory method, this class must always be constructed via make_shared
+		static Pointer Create(boost::asio::io_service &service, const boost::asio::ip::tcp::endpoint &endpoint, MessageDispatch &dispatch, ConnectionFactory factory) {
+			return Pointer(new SocketListener(service, endpoint, dispatch, factory));
+		}
+
+		void Start();
+		void Close();
+
+	private:
+		SocketListener(boost::asio::io_service &service, const boost::asio::ip::tcp::endpoint &endpoint, MessageDispatch &dispatch, ConnectionFactory factory);
+
+		void Accept();
+
+		boost::asio::io_service &service_;
+		boost::asio::ip::tcp::acceptor acceptor_;
+		boost::asio::ip::tcp::endpoint endpoint_;
+		boost::asio::ip::tcp::socket socket_;
+		boost::asio::ip::tcp::endpoint peer_;
+		MessageDispatch &dispatch_;
+		ConnectionFactory factory_;
+	};
 }; // namespace airnav::uat
 
 #endif

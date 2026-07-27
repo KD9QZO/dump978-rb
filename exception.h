@@ -9,12 +9,16 @@
 
 #include <stdexcept>
 
+
 namespace airnav::uat {
-    class config_error : public std::runtime_error {
-      public:
-        explicit config_error(const std::string &what_arg) : runtime_error(what_arg) {}
-        explicit config_error(const char *what_arg) : runtime_error(what_arg) {}
-    };
+	class config_error: public std::runtime_error {
+	public:
+		explicit config_error(const std::string &what_arg): runtime_error(what_arg) {
+		}
+
+		explicit config_error(const char *what_arg): runtime_error(what_arg) {
+		}
+	};
 }; // namespace airnav::uat
 
 #endif

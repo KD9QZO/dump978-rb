@@ -16,60 +16,68 @@
 #include "message_source.h"
 #include "uat_message.h"
 
+
 namespace airnav::uat {
-    class Demodulator {
-      public:
-        // Return value of Demodulate
-        struct Message {
-            Bytes payload;
-            unsigned corrected_errors;
-            PhaseBuffer::const_iterator begin;
-            PhaseBuffer::const_iterator end;
-        };
+	class Demodulator {
+	public:
+		// Return value of Demodulate
+		struct Message {
+			Bytes payload;
+			unsigned corrected_errors;
+			PhaseBuffer::const_iterator begin;
+			PhaseBuffer::const_iterator end;
+		};
 
-        virtual ~Demodulator() {}
-        virtual std::vector<Message> Demodulate(PhaseBuffer::const_iterator begin, PhaseBuffer::const_iterator end) = 0;
 
-        virtual unsigned NumTrailingSamples() = 0;
+		virtual ~Demodulator() {
+		}
 
-      protected:
-        FEC fec_;
-    };
+		virtual std::vector<Message> Demodulate(PhaseBuffer::const_iterator begin, PhaseBuffer::const_iterator end) = 0;
 
-    class TwoMegDemodulator : public Demodulator {
-      public:
-        std::vector<Message> Demodulate(PhaseBuffer::const_iterator begin, PhaseBuffer::const_iterator end) override;
-        unsigned NumTrailingSamples() override;
+		virtual unsigned NumTrailingSamples() = 0;
 
-      private:
-        boost::optional<Message> DemodBest(PhaseBuffer::const_iterator begin, bool downlink);
-        boost::optional<Message> DemodOneDownlink(PhaseBuffer::const_iterator begin);
-        boost::optional<Message> DemodOneUplink(PhaseBuffer::const_iterator begin);
-    };
+	protected:
+		FEC fec_;
+	};
 
-    class Receiver : public MessageSource {
-      public:
-        virtual void HandleSamples(std::uint64_t timestamp, Bytes::const_iterator begin, Bytes::const_iterator end) = 0;
 
-        virtual void HandleError(const boost::system::error_code &ec) { DispatchError(ec); }
-    };
+	class TwoMegDemodulator: public Demodulator {
+	public:
+		std::vector<Message> Demodulate(PhaseBuffer::const_iterator begin, PhaseBuffer::const_iterator end) override;
+		unsigned NumTrailingSamples() override;
 
-    class SingleThreadReceiver : public Receiver {
-      public:
-        SingleThreadReceiver(SampleFormat format);
+	private:
+		boost::optional<Message> DemodBest(PhaseBuffer::const_iterator begin, bool downlink);
+		boost::optional<Message> DemodOneDownlink(PhaseBuffer::const_iterator begin);
+		boost::optional<Message> DemodOneUplink(PhaseBuffer::const_iterator begin);
+	};
 
-        void HandleSamples(std::uint64_t timestamp, Bytes::const_iterator begin, Bytes::const_iterator end) override;
 
-      private:
-        SampleConverter::Pointer converter_;
-        std::unique_ptr<Demodulator> demodulator_;
+	class Receiver: public MessageSource {
+	public:
+		virtual void HandleSamples(std::uint64_t timestamp, Bytes::const_iterator begin, Bytes::const_iterator end) = 0;
 
-        Bytes samples_;
-        std::size_t saved_samples_ = 0;
+		virtual void HandleError(const boost::system::error_code &ec) {
+			DispatchError(ec);
+		}
+	};
 
-        PhaseBuffer phase_;
-    };
 
+	class SingleThreadReceiver: public Receiver {
+	public:
+		SingleThreadReceiver(SampleFormat format);
+
+		void HandleSamples(std::uint64_t timestamp, Bytes::const_iterator begin, Bytes::const_iterator end) override;
+
+	private:
+		SampleConverter::Pointer converter_;
+		std::unique_ptr<Demodulator> demodulator_;
+
+		Bytes samples_;
+		std::size_t saved_samples_ = 0;
+
+		PhaseBuffer phase_;
+	};
 }; // namespace airnav::uat
 
 #endif

@@ -22,46 +22,50 @@
 #include "fec.h"
 #include "message_source.h"
 
+
 namespace airnav::uat {
-    class StratuxSerial : public MessageSource, public std::enable_shared_from_this<StratuxSerial> {
-      public:
-        typedef std::shared_ptr<StratuxSerial> Pointer;
+	class StratuxSerial: public MessageSource, public std::enable_shared_from_this<StratuxSerial> {
+	public:
+		typedef std::shared_ptr<StratuxSerial> Pointer;
 
-        virtual ~StratuxSerial() {}
+		virtual ~StratuxSerial() {
+		}
 
-        virtual void Start();
-        virtual void Stop();
+		virtual void Start();
+		virtual void Stop();
 
-        static Pointer Create(boost::asio::io_service &io_service, const std::string &path) { return Pointer(new StratuxSerial(io_service, path)); }
+		static Pointer Create(boost::asio::io_service &io_service, const std::string &path) {
+			return Pointer(new StratuxSerial(io_service, path));
+		}
 
-      protected:
-        StratuxSerial(boost::asio::io_service &io_service, const std::string &path);
+	protected:
+		StratuxSerial(boost::asio::io_service &io_service, const std::string &path);
 
-      private:
-        void StartReading();
-        void ParseInput(const Bytes &buf);
-        boost::optional<RawMessage> ParseMessage(const Bytes &message, std::uint64_t sys_timestamp);
-        void HandleError(const boost::system::error_code &ec);
+	private:
+		void StartReading();
+		void ParseInput(const Bytes &buf);
+		boost::optional<RawMessage> ParseMessage(const Bytes &message, std::uint64_t sys_timestamp);
+		void HandleError(const boost::system::error_code &ec);
 
-        // the size of the read buffer
-        const std::size_t read_buffer_size = 1024 * 16;
-        // how long to wait between scheduling reads (to reduce the spinning on short messages)
-        const std::chrono::milliseconds read_interval = std::chrono::milliseconds(50);
+		// the size of the read buffer
+		const std::size_t read_buffer_size = 1024 * 16;
+		// how long to wait between scheduling reads (to reduce the spinning on short messages)
+		const std::chrono::milliseconds read_interval = std::chrono::milliseconds(50);
 
-        boost::asio::io_service &io_service_;
-        std::string path_;
-        boost::asio::serial_port port_;
-        boost::asio::steady_timer read_timer_;
-        std::shared_ptr<Bytes> readbuf_;
-        FEC fec_;
+		boost::asio::io_service &io_service_;
+		std::string path_;
+		boost::asio::serial_port port_;
+		boost::asio::steady_timer read_timer_;
+		std::shared_ptr<Bytes> readbuf_;
+		FEC fec_;
 
-        enum class ParserState;
-        ParserState parser_state_;
-        unsigned preamble_index_;
-        std::uint32_t message_length_;
-        Bytes message_;
-        std::uint64_t message_start_timestamp_;
-    };
+		enum class ParserState;
+		ParserState parser_state_;
+		unsigned preamble_index_;
+		std::uint32_t message_length_;
+		Bytes message_;
+		std::uint64_t message_start_timestamp_;
+	};
 }; // namespace airnav::uat
 
 #endif

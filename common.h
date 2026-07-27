@@ -16,18 +16,21 @@
 #include <cstdint>
 #include <vector>
 
+
 namespace airnav::uat {
-    typedef std::vector<std::uint8_t> Bytes;
-    typedef std::vector<std::uint16_t> PhaseBuffer;
+	typedef std::vector<std::uint8_t> Bytes;
+	typedef std::vector<std::uint16_t> PhaseBuffer;
 
-    inline static double RoundN(double value, unsigned dp) {
-        const double scale = std::pow(10, dp);
-        return std::round(value * scale) / scale;
-    }
+	inline static double RoundN(double value, unsigned dp) {
+		const double scale = std::pow(10, dp);
+		return std::round(value * scale) / scale;
+	}
 
-    const auto unix_epoch = std::chrono::system_clock::from_time_t(0);
+	const auto unix_epoch = std::chrono::system_clock::from_time_t(0);
 
-    inline static std::uint64_t now_millis() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - unix_epoch).count(); }
+	inline static std::uint64_t now_millis() {
+		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - unix_epoch).count();
+	}
 }; // namespace airnav::uat
 
 #endif
