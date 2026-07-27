@@ -15,36 +15,42 @@
 
 #include "sample_source.h"
 
+
 namespace airnav::uat {
-    class SoapySampleSource : public SampleSource {
-      public:
-        static SampleSource::Pointer Create(boost::asio::io_service &service, const std::string &device_name, const boost::program_options::variables_map &options) { return Pointer(new SoapySampleSource(service, device_name, options)); }
+	class SoapySampleSource: public SampleSource {
+	public:
+		static SampleSource::Pointer Create(boost::asio::io_service &service, const std::string &device_name, const boost::program_options::variables_map &options) {
+			return Pointer(new SoapySampleSource(service, device_name, options));
+		}
 
-        virtual ~SoapySampleSource();
+		virtual ~SoapySampleSource();
 
-        void Init() override;
-        void Start() override;
-        void Stop() override;
-        SampleFormat Format() override { return format_; }
+		void Init() override;
+		void Start() override;
+		void Stop() override;
 
-      private:
-        SoapySampleSource(boost::asio::io_service &service, const std::string &device_name, const boost::program_options::variables_map &options);
+		SampleFormat Format() override {
+			return format_;
+		}
 
-        void Run();
-        void Keepalive();
+	private:
+		SoapySampleSource(boost::asio::io_service &service, const std::string &device_name, const boost::program_options::variables_map &options);
 
-        boost::asio::steady_timer timer_;
-        SampleFormat format_ = SampleFormat::UNKNOWN;
-        std::string device_name_;
-        boost::program_options::variables_map options_;
+		void Run();
+		void Keepalive();
 
-        std::shared_ptr<SoapySDR::Device> device_;
-        std::shared_ptr<SoapySDR::Stream> stream_;
-        std::unique_ptr<std::thread> rx_thread_;
-        bool halt_ = false;
+		boost::asio::steady_timer timer_;
+		SampleFormat format_ = SampleFormat::UNKNOWN;
+		std::string device_name_;
+		boost::program_options::variables_map options_;
 
-        static std::atomic_bool log_handler_registered_;
-    };
+		std::shared_ptr<SoapySDR::Device> device_;
+		std::shared_ptr<SoapySDR::Stream> stream_;
+		std::unique_ptr<std::thread> rx_thread_;
+		bool halt_ = false;
+
+		static std::atomic_bool log_handler_registered_;
+	};
 }; // namespace airnav::uat
 
 #endif
